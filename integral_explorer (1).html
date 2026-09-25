@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integral Explorer - Visualizador de Integrales Definidas</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        },
+                        purpleBrand: {
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- KaTeX para renderizado de fórmulas matemáticas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+    
+    <!-- FontAwesome para iconografía -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        canvas { touch-action: none; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 transition-colors duration-300 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header / Nav -->
+    <header class="sticky top-0 z-50 backdrop-blur-xl bg-slate-900/80 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 font-bold text-xl">
+                    <i class="fa-solid fa-chart-area"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                        Integral Explorer
+                    </h1>
+                    <p class="text-[10px] text-slate-400 font-medium tracking-wide uppercase">Cálculo Integral & Sumas de Riemann</p>
+                </div>
+            </div>
+
+            <!-- Navegación -->
+            <nav class="hidden md:flex items-center space-x-8 text-sm font-semibold text-slate-300">
+                <a href="#simulador" class="hover:text-indigo-400 transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-xs text-indigo-400"></i> Simulador
+                </a>
+                <a href="#teoria" class="hover:text-indigo-400 transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-book-open text-xs text-purple-400"></i> Teoría
+                </a>
+                <a href="#ejemplo" class="hover:text-indigo-400 transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-xs text-emerald-400"></i> Ejemplo Guiado
+                </a>
+            </nav>
+
+            <!-- Acciones rápidas -->
+            <div class="flex items-center space-x-3">
+                <button id="quickPreset1" class="hidden sm:inline-flex px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all items-center gap-1.5">
+                    <i class="fa-solid fa-bolt"></i> Demo $\int_0^3 x^2$
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+
+        <!-- Hero Intro -->
+        <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-950/80 to-slate-900 border border-slate-800 p-8 sm:p-10 shadow-2xl">
+            <div class="absolute -right-20 -top-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-20 -bottom-20 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 max-w-3xl space-y-4">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/20 text-indigo-300 text-xs font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                    Laboratorio Interactivo de Cálculo
+                </div>
+                <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                    Explora el Área Bajo la Curva con <span class="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">Integral Explorer</span>
+                </h2>
+                <p class="text-slate-300 text-base sm:text-lg font-normal leading-relaxed">
+                    Visualiza cómo la aproximación por <strong>Sumas de Riemann</strong> mediante particiones finitas de rectángulos converge de forma exacta al valor de la <strong>Integral Definida</strong> cuando el número de subintervalos tiende al infinito.
+                </p>
+            </div>
+        </section>
+
+        <!-- Simulador Principal -->
+        <section id="simulador" class="bg-slate-800/80 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-slate-700/80 shadow-2xl space-y-6">
+            
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-700/80 pb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-2.5">
+                        <i class="fa-solid fa-square-poll-vertical text-indigo-400"></i> Simulador Interactivo de Riemann
+                    </h3>
+                    <p class="text-sm text-slate-400 mt-1">
+                        Ajusta la función, los límites de integración y el número de particiones para analizar el comportamiento.
+                    </p>
+                </div>
+                
+                <!-- Selector de Presets Rápidos -->
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="text-slate-400 font-semibold uppercase tracking-wider text-[11px] mr-1">Casos Rápidos:</span>
+                    <button data-preset="parabola" class="preset-btn px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white transition-all font-medium border border-slate-600">Parábola $x^2$</button>
+                    <button data-preset="sine" class="preset-btn px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white transition-all font-medium border border-slate-600">Seno Oscilante</button>
+                    <button data-preset="inverted" class="preset-btn px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white transition-all font-medium border border-slate-600">Cúpula $-0.5x^2+4$</button>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-12 gap-8">
+                
+                <!-- Panel del Canvas (Visualización) -->
+                <div class="lg:col-span-8 flex flex-col space-y-4">
+                    
+                    <div class="relative w-full aspect-[4/3] sm:aspect-[16/10] bg-slate-950 rounded-2xl overflow-hidden border border-slate-700/90 shadow-inner group">
+                        <canvas id="integralCanvas" class="w-full h-full cursor-crosshair"></canvas>
+                        
+                        <!-- Overlay Informativo dentro del Canvas -->
+                        <div class="absolute top-4 left-4 bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-700 text-xs font-mono space-y-1 shadow-lg pointer-events-none">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+                                <span class="text-slate-400">Función:</span>
+                                <span id="canvasFnTag" class="text-white font-semibold">f(x) = x²</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+                                <span class="text-slate-400">Intervalo:</span>
+                                <span id="canvasIntervalTag" class="text-purple-300 font-semibold">[0.0, 3.0]</span>
+                            </div>
+                        </div>
+
+                        <!-- Tip flotante interactivo -->
+                        <div class="absolute bottom-3 right-3 text-[11px] text-slate-500 bg-slate-900/80 px-2.5 py-1 rounded-lg backdrop-blur-sm border border-slate-800">
+                            <i class="fa-solid fa-circle-info mr-1"></i> Pasa el cursor sobre la gráfica para evaluar $f(x)$
+                        </div>
+                    </div>
+
+                    <!-- Métricas de Resultado Numérico -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        
+                        <div class="bg-slate-900/90 p-4 rounded-2xl border border-blue-500/30 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-bl-full pointer-events-none"></div>
+                            <span class="text-xs font-semibold text-blue-400 uppercase tracking-wider block mb-1">
+                                Suma de Riemann ($S_n$)
+                            </span>
+                            <div id="riemannVal" class="text-2xl sm:text-3xl font-bold font-mono text-white">0.0000</div>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Aproximación por $n$ rectángulos</span>
+                        </div>
+
+                        <div class="bg-slate-900/90 p-4 rounded-2xl border border-indigo-500/30 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-indigo-500/10 rounded-bl-full pointer-events-none"></div>
+                            <span class="text-xs font-semibold text-indigo-400 uppercase tracking-wider block mb-1">
+                                Valor Exacto ($\int_a^b f(x)dx$)
+                            </span>
+                            <div id="exactVal" class="text-2xl sm:text-3xl font-bold font-mono text-white">0.0000</div>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Integral analítica / exacta</span>
+                        </div>
+
+                        <div class="bg-slate-900/90 p-4 rounded-2xl border border-purple-500/30 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-bl-full pointer-events-none"></div>
+                            <span class="text-xs font-semibold text-purple-400 uppercase tracking-wider block mb-1">
+                                Porcentaje de Error
+                            </span>
+                            <div id="errorVal" class="text-2xl sm:text-3xl font-bold font-mono text-emerald-400">0.00%</div>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Diferencia $|\text{Exacto} - S_n|$</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Panel de Controles -->
+                <div class="lg:col-span-4 bg-slate-900/60 p-6 rounded-2xl border border-slate-700/70 flex flex-col justify-between space-y-6">
+                    
+                    <div class="space-y-5">
+                        <div class="flex items-center justify-between border-b border-slate-700/80 pb-3">
+                            <h4 class="font-bold text-slate-200 text-base flex items-center gap-2">
+                                <i class="fa-solid fa-sliders text-indigo-400"></i> Parámetros
+                            </h4>
+                            <button id="resetControlsBtn" class="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-rotate-left"></i> Restablecer
+                            </button>
+                        </div>
+
+                        <!-- 1. Selección de Función -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                                1. Función $f(x)$
+                            </label>
+                            <select id="funcSelect" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition-all">
+                                <option value="x2">f(x) = x² (Parábola estándar)</option>
+                                <option value="sine">f(x) = sin(x) + 2 (Onda Senoidal)</option>
+                                <option value="inverted">f(x) = -0.5x² + 4 (Parábola Invertida)</option>
+                                <option value="cos">f(x) = cos(x) + 1.5 (Coseno Desplazado)</option>
+                                <option value="cubic">f(x) = 0.1x³ - x + 3 (Polinomio Cúbico)</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. Método de Riemann -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                                2. Tipo de Aproximación
+                            </label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button data-method="left" class="method-btn py-2 px-2 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all text-center">
+                                    Izquierda
+                                </button>
+                                <button data-method="mid" class="method-btn active py-2 px-2 text-xs font-semibold rounded-xl border border-indigo-500 bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md transition-all text-center">
+                                    Punto Medio
+                                </button>
+                                <button data-method="right" class="method-btn py-2 px-2 text-xs font-semibold rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all text-center">
+                                    Derecha
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 3. Número de Subintervalos (n) -->
+                        <div class="space-y-2 pt-1">
+                            <div class="flex justify-between items-center text-sm">
+                                <label class="font-semibold text-slate-300 text-xs uppercase tracking-wider">
+                                    3. Subintervalos ($n$)
+                                </label>
+                                <span id="nValDisplay" class="font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg border border-indigo-500/20 text-xs">
+                                    10 rectángulos
+                                </span>
+                            </div>
+                            <input type="range" id="nSlider" min="1" max="100" value="10" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            <div class="flex justify-between text-[10px] text-slate-400">
+                                <span>n = 1</span>
+                                <span>n = 50</span>
+                                <span>n = 100</span>
+                            </div>
+                        </div>
+
+                        <!-- 4. Límites a y b -->
+                        <div class="space-y-2 pt-1">
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                                4. Intervalo de Integración $[a, b]$
+                            </label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1">
+                                    <span class="text-[11px] text-slate-400 font-medium">Límite inferior ($a$)</span>
+                                    <input type="number" id="inputA" step="0.25" min="-5" max="5" value="0" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm font-mono text-center text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                </div>
+                                <div class="space-y-1">
+                                    <span class="text-[11px] text-slate-400 font-medium">Límite superior ($b$)</span>
+                                    <input type="number" id="inputB" step="0.25" min="-5" max="5" value="3" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm font-mono text-center text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Ancho de Subintervalo info -->
+                    <div class="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/80 text-xs space-y-1">
+                        <div class="flex justify-between text-slate-400">
+                            <span>Ancho de cada rectángulo ($\Delta x$):</span>
+                            <span id="deltaXDisplay" class="font-mono text-indigo-300 font-bold">0.3000</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500">Fórmula: $\Delta x = \frac{b - a}{n}$</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- Secciones Explicativas Teóricas -->
+        <section id="teoria" class="grid md:grid-cols-2 gap-8">
+            
+            <!-- Fundamento de la Suma de Riemann -->
+            <div class="bg-slate-800/60 rounded-3xl p-6 sm:p-8 border border-slate-700/70 shadow-xl space-y-4 flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-chart-simple"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">¿Qué es una Suma de Riemann?</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Es un método numérico para aproximación del área de regiones delimitadas por curvas planas. Consiste en dividir la región $[a, b]$ en $n$ subintervalos de ancho $\Delta x = \frac{b-a}{n}$ y construir rectángulos cuya altura sea la evaluación de la función $f(x_i^*)$.
+                    </p>
+                    
+                    <div class="p-4 bg-slate-900/90 rounded-2xl border border-slate-700 text-center font-mono text-sm overflow-x-auto">
+                        $$S_n = \sum_{i=1}^{n} f(x_i^*) \Delta x$$
+                    </div>
+
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-check text-indigo-400 mt-0.5"></i>
+                            <span><strong>Izquierda:</strong> $x_i^*$ es el extremo izquierdo del subintervalo.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-check text-indigo-400 mt-0.5"></i>
+                            <span><strong>Punto Medio:</strong> $x_i^*$ es el punto central del subintervalo (mayor precisión).</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-check text-indigo-400 mt-0.5"></i>
+                            <span><strong>Derecha:</strong> $x_i^*$ es el extremo derecho del subintervalo.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Teorema Fundamental del Cálculo -->
+            <div class="bg-slate-800/60 rounded-3xl p-6 sm:p-8 border border-slate-700/70 shadow-xl space-y-4 flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-xl font-bold">
+                        <i class="fa-solid fa-infinity"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">La Integral Definida y el FTC</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Al hacer tender el número de rectángulos al infinito ($n \to \infty$), el ancho $\Delta x \to 0$. El límite de esta suma de áreas de rectángulos infinitamente delgados es la <strong>Integral Definida</strong>.
+                    </p>
+                    
+                    <div class="p-4 bg-slate-900/90 rounded-2xl border border-slate-700 text-center font-mono text-sm overflow-x-auto">
+                        $$\int_{a}^{b} f(x) \, dx = \lim_{n \to \infty} \sum_{i=1}^{n} f(x_i^*) \Delta x$$
+                    </div>
+
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Por el <strong>Segundo Teorema Fundamental del Cálculo</strong>, si $F'(x) = f(x)$, entonces:
+                    </p>
+                    <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-center font-mono text-xs text-purple-300">
+                        $$\int_{a}^{b} f(x) \, dx = F(b) - F(a)$$
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Ejemplo Guiado Paso a Paso -->
+        <section id="ejemplo" class="bg-slate-800/80 rounded-3xl p-6 sm:p-8 border border-slate-700/80 shadow-2xl space-y-6">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-slate-700/80 gap-4">
+                <div>
+                    <span class="text-xs uppercase font-bold text-emerald-400 tracking-wider">Demostración Analítica</span>
+                    <h3 class="text-2xl font-bold text-white mt-1">Ejemplo Resuelto Paso a Paso</h3>
+                </div>
+                <button id="toggleExampleBtn" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+                    <i class="fa-solid fa-chevron-down" id="exampleChevron"></i>
+                    <span id="exampleBtnText">Mostrar Solución Detallada</span>
+                </button>
+            </div>
+
+            <!-- Caja de Problema -->
+            <div class="p-5 bg-slate-900/90 rounded-2xl border border-slate-700/80 space-y-3">
+                <p class="text-sm text-slate-200">
+                    <strong>Problema:</strong> Calcula el área exacta encerrada bajo la curva $f(x) = x^2$ en el intervalo $[0, 3]$.
+                </p>
+                <div class="text-center text-lg font-mono text-indigo-300 py-1">
+                    $$\int_{0}^{3} x^2 \, dx = 9$$
+                </div>
+            </div>
+
+            <!-- Contenido del Ejemplo (Desplegable) -->
+            <div id="exampleContent" class="hidden space-y-6 pt-2 transition-all duration-300">
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    
+                    <!-- Paso 1 -->
+                    <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-700/70 space-y-2">
+                        <div class="flex items-center gap-2 font-bold text-blue-400 text-sm">
+                            <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">1</span>
+                            Antiderivada $F(x)$
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Aplicamos la regla de integración para potencias $\int x^n dx = \frac{x^{n+1}}{n+1}$:
+                        </p>
+                        <div class="p-2.5 bg-slate-950 rounded-xl text-center font-mono text-xs text-slate-200">
+                            $$F(x) = \int x^2 dx = \frac{x^3}{3}$$
+                        </div>
+                    </div>
+
+                    <!-- Paso 2 -->
+                    <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-700/70 space-y-2">
+                        <div class="flex items-center gap-2 font-bold text-indigo-400 text-sm">
+                            <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">2</span>
+                            Evaluación de Límites
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Evaluamos en los extremos $a = 0$ y $b = 3$ según el Teorema Fundamental:
+                        </p>
+                        <div class="p-2.5 bg-slate-950 rounded-xl text-center font-mono text-xs text-slate-200">
+                            $$F(3) = \frac{3^3}{3} = \frac{27}{3} = 9$$
+                            $$F(0) = \frac{0^3}{3} = 0$$
+                        </div>
+                    </div>
+
+                    <!-- Paso 3 -->
+                    <div class="p-5 bg-slate-900/60 rounded-2xl border border-slate-700/70 space-y-2">
+                        <div class="flex items-center gap-2 font-bold text-purple-400 text-sm">
+                            <span class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs">3</span>
+                            Resta $F(b) - F(a)$
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Restamos los resultados obtenidos para hallar el valor exacto:
+                        </p>
+                        <div class="p-2.5 bg-slate-950 rounded-xl text-center font-mono text-xs text-emerald-400 font-bold">
+                            $$\int_{0}^{3} x^2 \, dx = 9 - 0 = 9.00$$
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-950 py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 space-y-2">
+            <p class="font-medium text-slate-400">Integral Explorer - Herramienta Educativa de Cálculo Integral</p>
+            <p>Desarrollado para estudiantes de matemáticas, ciencias e ingeniería.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts & Lógica Matemática y de Renderizado -->
+    <script>
+        // --- Registro y Definición de Funciones Disponibles ---
+        const mathFunctions = {
+            x2: {
+                f: x => x * x,
+                F: x => (x * x * x) / 3,
+                name: 'f(x) = x²',
+                latex: 'f(x) = x^2'
+            },
+            sine: {
+                f: x => Math.sin(x) + 2,
+                F: x => -Math.cos(x) + 2 * x,
+                name: 'f(x) = sin(x) + 2',
+                latex: 'f(x) = \\sin(x) + 2'
+            },
+            inverted: {
+                f: x => -0.5 * x * x + 4,
+                F: x => (-0.5 * Math.pow(x, 3) / 3) + 4 * x,
+                name: 'f(x) = -0.5x² + 4',
+                latex: 'f(x) = -0.5x^2 + 4'
+            },
+            cos: {
+                f: x => Math.cos(x) + 1.5,
+                F: x => Math.sin(x) + 1.5 * x,
+                name: 'f(x) = cos(x) + 1.5',
+                latex: 'f(x) = \\cos(x) + 1.5'
+            },
+            cubic: {
+                f: x => 0.1 * Math.pow(x, 3) - x + 3,
+                F: x => (0.1 * Math.pow(x, 4) / 4) - (Math.pow(x, 2) / 2) + 3 * x,
+                name: 'f(x) = 0.1x³ - x + 3',
+                latex: 'f(x) = 0.1x^3 - x + 3'
+            }
+        };
+
+        // --- Estado Global de la App ---
+        let appState = {
+            funcKey: 'x2',
+            method: 'mid', // 'left', 'mid', 'right'
+            n: 10,
+            a: 0.0,
+            b: 3.0,
+            hoverX: null
+        };
+
+        // DOM Elements
+        const canvas = document.getElementById('integralCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const funcSelect = document.getElementById('funcSelect');
+        const nSlider = document.getElementById('nSlider');
+        const nValDisplay = document.getElementById('nValDisplay');
+        const inputA = document.getElementById('inputA');
+        const inputB = document.getElementById('inputB');
+        const methodBtns = document.querySelectorAll('.method-btn');
+        const resetControlsBtn = document.getElementById('resetControlsBtn');
+        const deltaXDisplay = document.getElementById('deltaXDisplay');
+
+        const riemannValEl = document.getElementById('riemannVal');
+        const exactValEl = document.getElementById('exactVal');
+        const errorValEl = document.getElementById('errorVal');
+
+        const canvasFnTag = document.getElementById('canvasFnTag');
+        const canvasIntervalTag = document.getElementById('canvasIntervalTag');
+
+        const toggleExampleBtn = document.getElementById('toggleExampleBtn');
+        const exampleContent = document.getElementById('exampleContent');
+        const exampleChevron = document.getElementById('exampleChevron');
+        const exampleBtnText = document.getElementById('exampleBtnText');
+
+        // --- Cálculo Matemático de Riemann e Integral ---
+        function calculateExactIntegral(a, b, funcKey) {
+            const fn = mathFunctions[funcKey];
+            return fn.F(b) - fn.F(a);
+        }
+
+        function calculateRiemannSum(a, b, n, method, funcKey) {
+            const f = mathFunctions[funcKey].f;
+            const dx = (b - a) / n;
+            let totalArea = 0;
+
+            for (let i = 0; i < n; i++) {
+                let xEval;
+                if (method === 'left') {
+                    xEval = a + i * dx;
+                } else if (method === 'right') {
+                    xEval = a + (i + 1) * dx;
+                } else {
+                    // mid
+                    xEval = a + (i + 0.5) * dx;
+                }
+                totalArea += f(xEval) * dx;
+            }
+            return totalArea;
+        }
+
+        // --- Redimensionado y Dibujo en Canvas ---
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            renderCanvas();
+        }
+
+        function renderCanvas() {
+            if (!ctx) return;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const { a, b, n, method, funcKey } = appState;
+            const f = mathFunctions[funcKey].f;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Márgenes y Rangos de la gráfica
+            const margin = 50 * (window.devicePixelRatio || 1);
+            
+            // Determinar rango automático de ejes para centrar apropiadamente la función
+            const minX = Math.min(a, -1) - 1;
+            const maxX = Math.max(b, 4) + 1;
+            const minY = -1;
+            const maxY = 6;
+
+            // Funciones de mapeo de coordenadas matematicas a pixeles del canvas
+            const toPxX = x => margin + ((x - minX) / (maxX - minX)) * (width - 2 * margin);
+            const toPxY = y => height - margin - ((y - minY) / (maxY - minY)) * (height - 2 * margin);
+
+            // 1. Dibujar Rejilla/Grid
+            ctx.lineWidth = 1 * (window.devicePixelRatio || 1);
+            ctx.strokeStyle = '#1e293b'; // slate-800
+            
+            for (let x = Math.ceil(minX); x <= Math.floor(maxX); x++) {
+                ctx.beginPath();
+                ctx.moveTo(toPxX(x), margin);
+                ctx.lineTo(toPxX(x), height - margin);
+                ctx.stroke();
+            }
+            for (let y = Math.ceil(minY); y <= Math.floor(maxY); y++) {
+                ctx.beginPath();
+                ctx.moveTo(margin, toPxY(y));
+                ctx.lineTo(width - margin, toPxY(y));
+                ctx.stroke();
+            }
+
+            // 2. Dibujar Ejes X e Y
+            ctx.lineWidth = 2 * (window.devicePixelRatio || 1);
+            ctx.strokeStyle = '#475569'; // slate-600
+            
+            // Eje X
+            ctx.beginPath();
+            ctx.moveTo(margin, toPxY(0));
+            ctx.lineTo(width - margin, toPxY(0));
+            ctx.stroke();
+            
+            // Eje Y
+            ctx.beginPath();
+            ctx.moveTo(toPxX(0), margin);
+            ctx.lineTo(toPxX(0), height - margin);
+            ctx.stroke();
+
+            // 3. Área Exacta Sombreada (Fondo suave)
+            ctx.fillStyle = 'rgba(99, 102, 241, 0.12)'; // Indigo transparente
+            ctx.beginPath();
+            const stepArea = (b - a) / 200;
+            ctx.moveTo(toPxX(a), toPxY(0));
+            for (let x = a; x <= b; x += stepArea) {
+                ctx.lineTo(toPxX(x), toPxY(f(x)));
+            }
+            ctx.lineTo(toPxX(b), toPxY(f(b)));
+            ctx.lineTo(toPxX(b), toPxY(0));
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. Dibujar Rectángulos de Riemann
+            const dx = (b - a) / n;
+            ctx.lineWidth = 1.5 * (window.devicePixelRatio || 1);
+
+            for (let i = 0; i < n; i++) {
+                const xLeft = a + i * dx;
+                const xRight = xLeft + dx;
+                let xEval;
+
+                if (method === 'left') xEval = xLeft;
+                else if (method === 'right') xEval = xRight;
+                else xEval = xLeft + dx / 2;
+
+                const yVal = f(xEval);
+
+                const p1 = { x: toPxX(xLeft), y: toPxY(0) };
+                const p2 = { x: toPxX(xLeft), y: toPxY(yVal) };
+                const p3 = { x: toPxX(xRight), y: toPxY(yVal) };
+                const p4 = { x: toPxX(xRight), y: toPxY(0) };
+
+                // Relleno de rectángulo
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.35)'; // Blue fill
+                ctx.strokeStyle = 'rgba(96, 165, 250, 0.85)'; // Blue border
+
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.lineTo(p3.x, p3.y);
+                ctx.lineTo(p4.x, p4.y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Punto Muestra de Evaluación
+                ctx.fillStyle = '#f43f5e'; // Rose point
+                ctx.beginPath();
+                ctx.arc(toPxX(xEval), toPxY(yVal), 3.5 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 5. Dibujar la Curva Principal de la Función f(x)
+            ctx.lineWidth = 3 * (window.devicePixelRatio || 1);
+            ctx.strokeStyle = '#818cf8'; // Indigo 400
+            ctx.beginPath();
+            const stepCurve = (maxX - minX) / 400;
+            let isFirst = true;
+            for (let x = minX; x <= maxX; x += stepCurve) {
+                const px = toPxX(x);
+                const py = toPxY(f(x));
+                if (isFirst) {
+                    ctx.moveTo(px, py);
+                    isFirst = false;
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+            ctx.stroke();
+
+            // 6. Líneas de Límites A y B
+            ctx.lineWidth = 2 * (window.devicePixelRatio || 1);
+            ctx.setLineDash([6, 6]);
+            ctx.strokeStyle = '#f43f5e'; // Rose
+
+            // Límite A
+            ctx.beginPath();
+            ctx.moveTo(toPxX(a), margin);
+            ctx.lineTo(toPxX(a), height - margin);
+            ctx.stroke();
+
+            // Límite B
+            ctx.beginPath();
+            ctx.moveTo(toPxX(b), margin);
+            ctx.lineTo(toPxX(b), height - margin);
+            ctx.stroke();
+
+            ctx.setLineDash([]); // Reset linea punteada
+
+            // Etiquetas de Límites en Eje X
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = `600 ${12 * (window.devicePixelRatio || 1)}px "JetBrains Mono", monospace`;
+            ctx.fillText(`a=${a}`, toPxX(a) - 15, height - margin + (20 * (window.devicePixelRatio || 1)));
+            ctx.fillText(`b=${b}`, toPxX(b) - 15, height - margin + (20 * (window.devicePixelRatio || 1)));
+        }
+
+        // --- Actualización General de Interfaz y Cálculos ---
+        function updateApp() {
+            let a = parseFloat(inputA.value);
+            let b = parseFloat(inputB.value);
+
+            // Forzar validez a < b
+            if (a >= b) {
+                b = a + 0.5;
+                inputB.value = b;
+            }
+
+            appState.a = a;
+            appState.b = b;
+            appState.n = parseInt(nSlider.value);
+            appState.funcKey = funcSelect.value;
+
+            const dx = (b - a) / appState.n;
+
+            // Actualizar Etiquetas DOM
+            nValDisplay.textContent = `${appState.n} rectángulos`;
+            deltaXDisplay.textContent = dx.toFixed(4);
+            canvasFnTag.textContent = mathFunctions[appState.funcKey].name;
+            canvasIntervalTag.textContent = `[${a.toFixed(1)}, ${b.toFixed(1)}]`;
+
+            // Calcular Valores
+            const riemannSum = calculateRiemannSum(appState.a, appState.b, appState.n, appState.method, appState.funcKey);
+            const exactIntegral = calculateExactIntegral(appState.a, appState.b, appState.funcKey);
+            
+            const absError = Math.abs(exactIntegral - riemannSum);
+            const percentError = exactIntegral !== 0 ? (absError / Math.abs(exactIntegral)) * 100 : 0;
+
+            // Actualizar DOM de Resultados
+            riemannValEl.textContent = riemannSum.toFixed(4);
+            exactValEl.textContent = exactIntegral.toFixed(4);
+            errorValEl.textContent = `${percentError.toFixed(2)}%`;
+
+            // Redibujar Canvas
+            renderCanvas();
+        }
+
+        // --- Event Listeners ---
+        funcSelect.addEventListener('change', updateApp);
+        nSlider.addEventListener('input', updateApp);
+        inputA.addEventListener('change', updateApp);
+        inputB.addEventListener('change', updateApp);
+
+        // Selección de Método de Riemann (Izquierda, Medio, Derecha)
+        methodBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                methodBtns.forEach(b => {
+                    b.classList.remove('active', 'border-indigo-500', 'bg-gradient-to-r', 'from-indigo-600', 'to-blue-600', 'text-white', 'shadow-md');
+                    b.classList.add('border-slate-700', 'bg-slate-800', 'text-slate-300');
+                });
+
+                const target = e.currentTarget;
+                target.classList.add('active', 'border-indigo-500', 'bg-gradient-to-r', 'from-indigo-600', 'to-blue-600', 'text-white', 'shadow-md');
+                target.classList.remove('border-slate-700', 'bg-slate-800', 'text-slate-300');
+
+                appState.method = target.getAttribute('data-method');
+                updateApp();
+            });
+        });
+
+        // Botón Restablecer
+        resetControlsBtn.addEventListener('click', () => {
+            funcSelect.value = 'x2';
+            nSlider.value = 10;
+            inputA.value = 0;
+            inputB.value = 3;
+            appState.method = 'mid';
+
+            methodBtns.forEach(b => {
+                b.classList.remove('active', 'border-indigo-500', 'bg-gradient-to-r', 'from-indigo-600', 'to-blue-600', 'text-white', 'shadow-md');
+                b.classList.add('border-slate-700', 'bg-slate-800', 'text-slate-300');
+                if (b.getAttribute('data-method') === 'mid') {
+                    b.classList.add('active', 'border-indigo-500', 'bg-gradient-to-r', 'from-indigo-600', 'to-blue-600', 'text-white', 'shadow-md');
+                }
+            });
+
+            updateApp();
+        });
+
+        // Botones de Presets Rápidos
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const preset = e.currentTarget.getAttribute('data-preset');
+                if (preset === 'parabola') {
+                    funcSelect.value = 'x2';
+                    inputA.value = 0;
+                    inputB.value = 3;
+                    nSlider.value = 10;
+                } else if (preset === 'sine') {
+                    funcSelect.value = 'sine';
+                    inputA.value = 0;
+                    inputB.value = 6.28;
+                    nSlider.value = 16;
+                } else if (preset === 'inverted') {
+                    funcSelect.value = 'inverted';
+                    inputA.value = -2;
+                    inputB.value = 2;
+                    nSlider.value = 12;
+                }
+                updateApp();
+            });
+        });
+
+        // Quick Preset desde Header
+        document.getElementById('quickPreset1').addEventListener('click', () => {
+            funcSelect.value = 'x2';
+            inputA.value = 0;
+            inputB.value = 3;
+            nSlider.value = 20;
+            updateApp();
+            document.getElementById('simulador').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Toggle del Ejemplo Paso a Paso
+        toggleExampleBtn.addEventListener('click', () => {
+            const isHidden = exampleContent.classList.contains('hidden');
+            if (isHidden) {
+                exampleContent.classList.remove('hidden');
+                exampleBtnText.textContent = 'Ocultar Solución';
+                exampleChevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            } else {
+                exampleContent.classList.add('hidden');
+                exampleBtnText.textContent = 'Mostrar Solución Detallada';
+                exampleChevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            }
+        });
+
+        // Manejo de cambio de tamaño de ventana
+        window.addEventListener('resize', resizeCanvas);
+
+        // Inicializar al cargar la ventana
+        window.onload = () => {
+            resizeCanvas();
+            updateApp();
+        };
+    </script>
+</body>
+</html>
